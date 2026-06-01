@@ -1,0 +1,35 @@
+# gitleaks (full history) — secrets scanning per security standard §V GitHub subsection.
+# Runs on every PR + push. Pinned to commit SHAs per security §V.
+name: gitleaks
+
+on:
+  pull_request:
+  push:
+
+permissions: read-all
+
+concurrency:
+  group: gitleaks-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  scan:
+    name: gitleaks (full history)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout (full history)
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          fetch-depth: 0
+
+      - name: Install gitleaks
+        run: |
+          set -euo pipefail
+          VERSION=8.21.2
+          curl -sSLf -o /tmp/gitleaks.tar.gz \
+            "https://github.com/gitleaks/gitleaks/releases/download/v${VERSION}/gitleaks_${VERSION}_linux_x64.tar.gz"
+          tar -xzf /tmp/gitleaks.tar.gz -C /tmp gitleaks
+          /tmp/gitleaks version
+
+      - name: Run gitleaks (full history)
+        run: /tmp/gitleaks detect --log-opts="--all" --redact --no-banner --exit-code 1
